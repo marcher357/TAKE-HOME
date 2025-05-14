@@ -4,3 +4,9 @@ pydantic
 pydantic_core
 SQLAlchemy
 mysql-connector-python
+openai
+langchain
+python-dotenv
+langchain-openai
+langchain-core
+chromadb
