@@ -13,8 +13,15 @@ services:
       - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - ENV=prod
     depends_on:
       - mysql
+    command: ["./wait-for-mysql.sh", "uvicorn", "app.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
 
   mysql:
     image: mysql:8.0
@@ -29,7 +36,9 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # initialize database
+      
+      
 volumes:
   mysql_data:
   chroma_data:
