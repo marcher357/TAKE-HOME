@@ -20,7 +20,11 @@ prompt = ChatPromptTemplate.from_messages([
      Bellow are documents from your knowledge base that are most similar to the question that the user is asking.
      {similar_docs}
      
-     You will use these documents to answer the users question"""),
+     You will use these documents to answer the users question.
+     
+     RESPONSE GUIDELINES:
+     - Your answers are based only on the data found in the documents in your knowledgebase
+     - Do not make up any information or provide any opinions."""),
     ("human", "{question}"),
 ])
 
