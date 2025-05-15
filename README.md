@@ -1,4 +1,58 @@
-# TAKE-HOME - Akshay Panchavatri
+# TAKE-HOME - Akshay Panchavati
+
+### Design Philosophy & Tech Choices
+
+#### Modular and Maintainable Architecture
+
+The project is structured for clarity and scalability, with separate directories for:
+
+- `app/routers/`: Contains API route handlers for question answering, summarization, and document management.
+- `app/src/`: Contains core logic and lifecycle hooks, including vector store setup and model initialization.
+- `app/src/llm/`: Contains language model abstraction utilities (currently using LangChain).
+
+The FastAPI `lifespan` context manager is used to initialize long-lived resources (like vector stores) during application startup. This ensures shared state is ready before requests are handled, enabling clean separation of concerns and robust startup logic.
+
+`lifespan` also initialized the mysql database if required.
+
+#### Language Model Abstraction with LangChain
+
+LangChain provides a unified interface to interact with various LLMs. It's used here to:
+
+- Allow easy swapping of backend models (e.g., OpenAI, Claude, LLaMA, Gemini)
+- I could have also implemented RAG with the available langchain tooling but, I prefered to do it myself. 
+
+This abstraction helps ensure the system is model-agnostic and adaptable to evolving LLM tooling.
+
+#### Database Design & Preferences
+
+The application currently uses a **MySQL** database managed via Docker and accessed using SQLAlchemy. It’s suitable for handling structured medical documents in development. However, for scalability and flexibility, a NoSQL alternative might be preferred in production:
+
+- **Firebase Cloud Firestore**: Serverless, great for real-time updates and mobile integration
+- **Amazon DynamoDB**: Scalable and highly available with predictable performance
+- **Redis with RedisJSON**: Ultra-fast storage for semi-structured data
+
+These options would be more suitable for storing diverse note formats, flexible schemas, and high-throughput workloads.
+
+#### Vector Store Integration
+
+The project uses **ChromaDB** as an embedded vector store to support RAG workflows and semantic search. It was chosen for its ease of use and local storage capabilities. 
+
+Other options like **FAISS** and **Pinecone** are supported by LangChain and could be integrated with minimal changes if scaling or cloud hosting is required. FAISS presented installation challenges locally, which is why ChromaDB was used for prototyping.
+
+
+### ENV Variables
+create a .env file and place it in the project root.
+```sh
+OPENAI_API_KEY=...
+
+MYSQL_USER=myuser
+MYSQL_PASSWORD=mypassword
+MYSQL_HOST=mysql
+MYSQL_PORT=3306
+MYSQL_DATABASE=mydb
+
+ENV=dev
+```
 
 ## Running Locally
 
@@ -7,6 +61,53 @@ pip install -r requirements.txt
 uvicorn app.src.main:app
 ```
 
+### Local Testing
+
+Some files for local testing are included in the `/tests` folder
+
+Part 1 -> `test_documents.py`
+Part 2 -> `test_llm.py`
+Part 3 -> `test_qa.py`
+
+### Containerized Deployment with Docker
+
+This project includes a full Dockerized setup for local development and deployment using **Docker Compose**. It defines two core services:
+
+---
+
+#### `fastapi` — Application Service
+
+- **Base Image:** `python:3.11-slim`
+- **Build Context:** Uses the local `Dockerfile` to install dependencies and copy application code.
+- **Exposed Port:** `8000` (mapped from host to container)
+- **Entrypoint:** Runs `uvicorn` with the FastAPI app entry point at `app.src.main:app`.
+- **Wait Script:** Uses a custom `wait-for-mysql.sh` script that blocks FastAPI startup until MySQL is ready.
+- **Volumes:**
+  - `./app:/app/app` — Mounts source code for hot reloading in development
+  - `chroma_data:/app/chroma_db` — Persists the embedded ChromaDB vector store
+- **Environment:**
+  - Reads from a `.env` file (e.g., `MYSQL_USER`, `OPENAI_API_KEY`)
+  - Injects these into the container at runtime
+- **Depends On:**
+  - Ensures MySQL container starts first
+
+---
+
+#### `mysql` — Relational Database Service
+
+- **Image:** `mysql:8.0`
+- **Exposed Port:** `3306`
+- **Initial Data:**
+  - Runs `./init.sql` on startup via `docker-entrypoint-initdb.d`
+- **Volumes:**
+  - `mysql_data:/var/lib/mysql` — Persists MySQL database
+- **Environment:**
+  - Sets root and user credentials (`MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, etc.)
+
+### Startup Coordination with `wait-for-mysql.sh`
+
+To ensure that FastAPI doesn't start before the MySQL container is ready to accept connections, this project uses a shell script named `wait-for-mysql.sh`.
+
 ## Docker Deployment
 
 ```sh
@@ -14,7 +115,12 @@ docker compose build
 docker compose up
 ``` 
 
-## Take Home - Solutions
+## Testing using docker
+
+curl scripts are provided to test parts 1-3 using the docker deployment.
+
+*NOTE*: Docker deployment presented some interesting problems as the mysql database was deployed as its own service and needed to be accessible for the fastapi service to load correctly. Before the fastapi service could be deployed, the mysql service had to *complete starting*. To acommplish this I wrote a shell script to wait for the mydqwl service to start prior to starting the fastapi service. 
+
 ### Health Endpoint (Part - 1a)
 ```curl
 curl --location 'http://0.0.0.0:8000/health'
@@ -61,7 +167,7 @@ curl --location 'http://0.0.0.0:8000/summarize_note' \
 
 ### Question Answer - RAG Pipeline (Part 3)
 ```curl
-curl --location 'http://127.0.0.1:8000/answer_question' \
+curl --location 'http://0.0.0.0:8000/answer_question' \
 --header 'Content-Type: application/json' \
 --data '{"question": "What are the rehab protocols after ACL surgery?"}'
 ```
