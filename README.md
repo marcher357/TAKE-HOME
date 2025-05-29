@@ -1,5 +1,42 @@
-# TAKE-HOME - Akshay Panchavati
+# 🔍 EVA Agent – A Modular Python AI Agent with LangChain & FastAPI
 
+A flexible and scalable AI agent built using FastAPI, LangChain, ChromaDB, and Docker — designed for real-world question answering, summarization, and semantic document search.
+
+---
+
+## 🚀 Highlights
+
+### 🔧 Modular Architecture
+- `app/routers/`: Routes for document ingestion, summarization, and Q&A.
+- `app/src/`: Core agent logic, lifecycle management, and utility modules.
+- `app/src/llm/`: LangChain-powered LLM interface layer (model-agnostic).
+
+### ⚙️ Lifecycle-aware Startup
+- Initializes vector store and MySQL using FastAPI’s `lifespan` context.
+- Ensures shared state (like ChromaDB and SQL sessions) is bootstrapped before serving traffic.
+
+### 🧠 LLM Abstraction with LangChain
+- Supports easy swapping between OpenAI, Claude, Gemini, or LLaMA.
+- Custom RAG pipeline (instead of LangChain’s default) to keep full control.
+
+---
+
+## 🗄️ Database & Storage
+
+- **Relational Layer**: MySQL via SQLAlchemy (Dockerized)
+- **Vector Store**: Embedded **ChromaDB** for lightweight local RAG
+- 💡 Designed to optionally swap in **Pinecone**, **FAISS**, or **Weaviate** if needed for scale
+
+---
+
+## 🧪 Testable from Day One
+
+Test suite available in `/tests`:
+- `test_documents.py` – document ingestion & listing
+- `test_llm.py` – summarization and language model sanity tests
+- `test_qa.py` – full RAG pipeline question-answering
+
+---
 ### Design Philosophy & Tech Choices
 
 #### Modular and Maintainable Architecture
@@ -150,7 +187,7 @@ curl --location 'http://0.0.0.0:8000/documents'
 }
 ```
 
-### Summarize (Part 2)
+### Summarize
 ```curl
 curl --location 'http://0.0.0.0:8000/summarize_note' \
 --header 'Content-Type: application/json' \
@@ -165,7 +202,7 @@ curl --location 'http://0.0.0.0:8000/summarize_note' \
 }
 ```
 
-### Question Answer - RAG Pipeline (Part 3)
+### Question Answer - RAG Pipelie
 ```curl
 curl --location 'http://0.0.0.0:8000/answer_question' \
 --header 'Content-Type: application/json' \
